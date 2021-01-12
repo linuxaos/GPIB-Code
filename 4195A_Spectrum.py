@@ -229,7 +229,12 @@ if len(lines) > 2:
         #  9              4SPECTRUM
         now = datetime.now()
         current_time = now.strftime("%Y/%m/%d %H:%M:%S")
-        heading = "4195A Spectrum Analyzer " + current_time + ",,,"
+        if span_specific == "FM":
+            heading = "4195A Spectrum Analyzer " + current_time + ",Commercial Radio FM Band,,"
+        elif span_specific == "FM1":
+            heading = "4195A Spectrum Analyzer " + current_time + ",Commercial Radio FM Band Swept with high RBW,,"
+        else:
+            heading = "4195A Spectrum Analyzer " + current_time + ",0-500MHz Sweep,,"
         f.write(heading + "\n")            # Let's write this out
         lstart=3
         heading = lines[2]
