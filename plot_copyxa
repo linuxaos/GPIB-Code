@@ -1,0 +1,208 @@
+#!/bin/bash
+#
+# @(#) Query the 4195a and produce a proper plot
+#
+if [[ -z $GPIB_SCANDIR ]]
+then
+	GPIB_SCANDIR="/var/www/html/GPIB/scans"
+fi
+if [[ -z $3 ]]
+then
+	echo -e "Usage:\n\t$0 numeric_version www_path this_run_description main_description"
+	echo -e "Where:"
+	echo -e "\tNumeric_version      - The unique numeric version of this run"
+	echo -e "\twww_path             - Where apache expects it's root dir. Default: ${GPIB_SCANDIR}/{www_path}"
+	echo -e "\tThis_run_description - A description for this run" 
+	echo -e "\tMain_description     - A description for all the runs in this project"
+	exit 1
+fi
+typeset -i NUMVERS=$1
+MYDATE=$(date);DE_DATE=$(date "+%m/%d/%Y %H:%M:%S")
+SPECIFIED_GPIB_SCANDIR=$2
+GPIB_SCANDIR="${GPIB_SCANDIR}/${SPECIFIED_GPIB_SCANDIR}"
+THIS_RUN_DESCRIPTION=$3
+[[ -n $4 ]] && MAIN_DESCRIPTION=$4
+MYHOST=$(hostname)
+TDIR="/tmp/GPIB_BUILD"
+TMAIN="${TDIR}/PLOT_MAIN.shtml"
+TMAINS="${TDIR}/PLOT_MAINS.shtml"
+rm -rf $TDIR
+mkdir -p $TDIR || { echo -e "ERROR: Cannot create directory: ${TDIR}"; exit 1; }
+echo -e "Output path = ${TDIR}\n"
+#
+if (( 1 == 1 ))
+then
+	./4195A_screen_shot_and_plot.py $NUMVERS $TDIR || exit 1
+	sleep 2
+	./4195A_local.py || exit 1
+fi
+
+[[ ! -d $GPIB_SCANDIR ]] && { mkdir -p $GPIB_SCANDIR || exit 1; }
+#
+# Ok, let's build the main html page
+# If you want the <head> tags use the following 2 lines
+#cat ${TDIR}/gpib_phase_raw_${NUMVERS}.html | tail -n +4 | head -n -2 >${TDIR}/gpib_phase_${NUMVERS}.html
+#cat ${TDIR}/gpib_power_raw_${NUMVERS}.html | tail -n +4 | head -n -2 >${TDIR}/gpib_power_${NUMVERS}.html
+#
+# Otherwise you get a <div>
+cp -p ${TDIR}/gpib_power_raw_${NUMVERS}.html ${TDIR}/gpib_power_${NUMVERS}.html
+cp -p ${TDIR}/gpib_phase_raw_${NUMVERS}.html ${TDIR}/gpib_phase_${NUMVERS}.html
+#
+cp -p ${TDIR}/gpib_power_raw_mid_${NUMVERS}.html ${TDIR}/gpib_power_mid_${NUMVERS}.html
+cp -p ${TDIR}/gpib_phase_raw_mid_${NUMVERS}.html ${TDIR}/gpib_phase_mid_${NUMVERS}.html
+echo -e "${THIS_RUN_DESCRIPTION} Created: ${MYDATE}" > ${TDIR}/gpib_description_${NUMVERS}.shtml
+cat ${TDIR}/4195_screen_shot_MACH_HEADER_${NUMVERS}.html >> ${TDIR}/gpib_description_${NUMVERS}.shtml
+#
+# We replace the main description or put a blank
+if [[ -n $MAIN_DESCRIPTION ]]
+then
+	echo -e "${MAIN_DESCRIPTION} - ${DE_DATE}" > ${TDIR}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html
+else
+	if [[ ! -f ${GPIB_SCANDIR}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html ]]
+	then
+		echo -e "&nbsp;"  > ${TDIR}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html
+	fi
+fi
+######################################################################################################################################
+# First one plot after the other.
+	echo -e "<table>" >$TMAIN
+	#
+	# POWER: First, add the current one
+	echo -e "\t<tr>" >>$TMAIN
+		echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+		echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+		echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
+		echo -e "\t\t\t</div>" >>$TMAIN
+		echo -e "\t\t</td>" >>$TMAIN
+	echo -e "\t</tr>" >>$TMAIN
+	echo -e "\t<tr>" >>$TMAIN
+		echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+		echo -e "\t\t\t<!--#include file=\"gpib_power_${NUMVERS}.html\"-->" >>$TMAIN
+		echo -e "\t\t</td>" >>$TMAIN
+	echo -e "\t</tr>" >>$TMAIN
+	#
+	# Next, let's build what is already there
+	ls $GPIB_SCANDIR | grep gpib_power | grep -v raw | sed 's/gpib_power_//;s/[.]html//' | grep -v "mid" | sort -nr | while read line
+	do
+		# Check for overwrite !!!!!!!!!!!!!!!!!!!!!!!!
+		(( line == NUMVERS )) && continue
+		if [[ ! -f $GPIB_SCANDIR/gpib_description_${line} ]]
+		then
+			echo -e "Power and phase for run number: ${line}" >$GPIB_SCANDIR/gpib_description_${line}
+		fi
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${line}.shtml\"-->" >>$TMAIN
+			echo -e "\t\t\t</div>" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+			echo -e "\t\t\t<!--#include file=\"gpib_power_${line}.html\"-->" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+	done
+	#
+	# PHASE: First, add the current one
+	echo -e "\t<tr>" >>$TMAIN
+		echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+		echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+		echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
+		echo -e "\t\t\t</div>" >>$TMAIN
+		echo -e "\t\t</td>" >>$TMAIN
+	echo -e "\t</tr>" >>$TMAIN
+	echo -e "\t<tr>" >>$TMAIN
+		echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+		echo -e "\t\t\t<!--#include file=\"gpib_phase_${NUMVERS}.html\"-->" >>$TMAIN
+		echo -e "\t\t</td>" >>$TMAIN
+	echo -e "\t</tr>" >>$TMAIN
+	#
+	# Next, lets build what is already there
+	ls $GPIB_SCANDIR | grep gpib_phase | grep -v raw | sed 's/gpib_phase_//;s/[.]html//' | grep -v "mid" | sort -nr | while read line
+	do
+		# Check for overwrite !!!!!!!!!!!!!!!!!!!!!!!!
+		(( line == NUMVERS )) && continue
+		if [[ ! -f $GPIB_SCANDIR/gpib_description_${line} ]]
+		then
+			echo -e "Power and phase for run number: ${line}" >$GPIB_SCANDIR/gpib_description_${line}
+		fi
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${line}.shtml\"-->" >>$TMAIN
+			echo -e "\t\t\t</div>" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+			echo -e "\t\t\t<!--#include file=\"gpib_phase_${line}.html\"-->" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+	done
+	echo -e "</table>" >>$TMAIN
+######################################################################################################################################
+# Next, one plot next to the other
+	echo -e "<table style=\"width:100%;\">" >$TMAINS
+	#
+	# First, add the current one
+		echo -e "\t<tr>" >>$TMAINS
+			echo -e "\t\t<td style=\"background-color:#004d00\">" >>$TMAINS
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
+			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAINS
+			echo -e "\t\t\t</div>" >>$TMAINS
+			echo -e "\t\t</td>" >>$TMAINS
+			echo -e "\t\t<td>" >>$TMAINS
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
+			echo -e "\t\t\t\t&nbsp;" >>$TMAINS
+			echo -e "\t\t\t</div>" >>$TMAINS
+			echo -e "\t\t</td>" >>$TMAINS
+		echo -e "\t</tr>" >>$TMAINS
+		echo -e "\t<tr>" >>$TMAINS
+			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
+
+				echo -e "\t\t\t<table style=\"width:100%;\">" >>$TMAINS
+					echo -e "\t\t\t\t<tr>" >>$TMAINS
+						echo -e "\t\t\t\t\t<td style=\"width:100%\">" >>$TMAINS
+							echo -e "\t\t\t\t\t\t<!--#include file=\"gpib_power_mid_${NUMVERS}.html\"-->" >>$TMAINS
+						echo -e "\t\t\t\t\t</td>" >>$TMAINS
+					echo -e "\t\t\t\t</tr>" >>$TMAINS
+				echo -e "\t\t\t</table>" >>$TMAINS
+
+			echo -e "\t\t</td>" >>$TMAINS
+			#
+			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
+			echo -e "\t\t\t<!--#include file=\"gpib_phase_mid_${NUMVERS}.html\"-->" >>$TMAINS
+			echo -e "\t\t</td>" >>$TMAINS
+		echo -e "\t</tr>" >>$TMAINS
+	ls $GPIB_SCANDIR | grep gpib_power | grep -v raw | sed 's/gpib_power_//;s/[.]html//' | grep -v "mid" | sort -nr | while read line
+	do
+		# Check for overwrite !!!!!!!!!!!!!!!!!!!!!!!!
+		(( line == NUMVERS )) && continue
+			echo -e "\t<tr>" >>$TMAINS
+				echo -e "\t\t<td style=\"background-color:#004d00\">" >>$TMAINS
+				echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
+				echo -e "\t\t\t\t<!--#include file=\"gpib_description_${line}.shtml\"-->" >>$TMAINS
+				echo -e "\t\t\t</div>" >>$TMAINS
+				echo -e "\t\t</td>" >>$TMAINS
+				echo -e "\t\t<td>" >>$TMAINS
+				echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
+				echo -e "\t\t\t\t&nbsp;">>$TMAINS
+				echo -e "\t\t\t</div>" >>$TMAINS
+				echo -e "\t\t</td>" >>$TMAINS
+			echo -e "\t</tr>" >>$TMAINS
+			echo -e "\t<tr>" >>$TMAINS
+				echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
+				echo -e "\t\t\t<!--#include file=\"gpib_power_mid_${line}.html\"-->" >>$TMAINS
+				echo -e "\t\t</td>" >>$TMAINS
+				echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
+				echo -e "\t\t\t<!--#include file=\"gpib_phase_mid_${line}.html\"-->" >>$TMAINS
+				echo -e "\t\t</td>" >>$TMAINS
+			echo -e "\t</tr>" >>$TMAINS
+	done
+	echo -e "</table>" >>$TMAINS
+#
+# Finishing touches
+sed 's/HOSTNAME/'"${MYHOST}"'/' gpib_base.shtml >${TDIR}/index.shtml
+sed 's/HOSTNAME/'"${MYHOST}"'/;s/PLOT_MAIN.shtml/PLOT_MAINS.shtml/' gpib_base.shtml >${TDIR}/indexs.shtml
+cp -p ${TDIR}/* $GPIB_SCANDIR/.

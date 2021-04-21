@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# @(#) Simple program to take screen shot and reset the instrument
+#
+./4195A_Screen_shot.py
+sleep 2
+./4195A_local.py

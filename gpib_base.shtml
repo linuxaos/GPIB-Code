@@ -1,0 +1,79 @@
+<html>
+	<head>
+		<title>
+			GPIB Athena
+		</title>
+		<META http-equiv="refresh" content="60">
+		<style>
+			table {
+				margin-left: auto;
+				margin-right: auto;
+				width:95%;
+			}
+		</style>
+		<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+	</head>
+	<body style="background-color:#a6a6a6">
+		<table> 
+			<tr>
+				<td style="width:100%;text-align:center;">
+					<table> 
+						<tr>
+							<td style="width:20%;background-color:#0033cc">
+								<div style="font-family:courier;font-weight:bold;font-size:16pt;text-align:center;">
+									<a href="/GPIB/index.cgi" style="color:White;font-family:Courier;font-weight:Bold;font-size:16pt;text-decoration: none;">Home</a>
+								</div>
+							</td>
+							<td style="width:60%;background-color:#0033cc">
+								<div style="font-family:courier;color:White;font-weight:bold;font-size:16pt;text-align:center;">
+									HOSTNAME 4195A GPIB Plots<BR>
+									<!--#include file="gpib_description_MAIN_CAPTURE_DESCRIPTION.html"-->
+								</div>
+							</td>
+							<td style="width:20%;background-color:#0033cc">
+								<div style="font-family:courier;color:White;font-weight:bold;font-size:12pt;text-align:center;">
+									[<span id="datetime"></span>]
+								</div>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+		<table> 
+			<tr>
+				<td style="width:100%;text-align:center;">
+					<table> 
+						<tr>
+							<td style="width:20%;background-color:#1affd1">
+								<div style="font-family:courier;font-weight:bold;font-size:16pt;text-align:center;">
+									<a href="index.shtml" style="color:Blue;font-family:Courier;font-weight:Bold;font-size:16pt;text-decoration: none;">Continuous</a>
+								</div>
+							</td>
+							<td style="width:20%;background-color:#1affd1">
+								<div style="font-family:courier;font-weight:bold;font-size:16pt;text-align:center;">
+									<a href="indexs.shtml" style="color:Blue;font-family:Courier;font-weight:Bold;font-size:16pt;text-decoration: none;">Side-by-side</a>
+								</div>
+							</td>
+							<td style="width:60%;background-color:#1affd1">
+								&nbsp;
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+		<table> 
+			<tr>
+				<td style="width:100%;text-align:center;">
+					<BR>
+					<!--#include file="PLOT_MAIN.shtml"-->
+				</td>
+			</tr>
+		</table>
+		<script>
+			var dt = new Date();
+			document.getElementById("datetime").innerHTML = dt.toLocaleString('en-GB')
+		</script>
+	</body>
+</html>

@@ -1,0 +1,4 @@
+[root@athena-n]:/var/www/html/GPIB # ll
+total 4
+lrwxrwxrwx 1 root root   29 Mar  4 22:01 index.cgi -> /opt/GPIB/GPIB-Code/index.cgi
+drwxr-xr-x 3 root root 4096 Apr 20 22:03 scans

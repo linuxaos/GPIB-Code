@@ -34,9 +34,8 @@ except:
 # Select gpib device at address 3
 gpib.select(3)
 gpib.write("++eoi 1")
+gpib.write("RST")
 sleep(2)
-gpib.write("++loc")
-gpib.write("SWM1\r\n")  # Cont sweep
 gpib.write("++loc")
 gpib.close()
 exit()

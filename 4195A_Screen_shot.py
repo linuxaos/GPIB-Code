@@ -111,54 +111,9 @@ gpib.write("++eoi 1\r\n")           # Enable EOI assertion with last character
 gpib.write("++eos 0\r\n")           # Append CR+LF to instrument commands
 gpib.write("++eot_enable 1\r\n")    # Append user defined character when EOI detected
 gpib.write("++eot_char 42\r\n")     # Append * (ASCII 42) when EOI is detected
-#gpib.write("++auto 1\r\n")
-qry = gpib.write("FNC2\r\n")        # Select Spectrum analyzer
-qry = gpib.write("PORT3\r\n")       # Select Port 3
-qry = gpib.write("VFTR1\r\n")       # Video filter on
-#
-# Lets set default min/max frequency span
-SPEC_START="START=+1E+03\r\n"
-SPEC_STOP="STOP=+500E+06\r\n"
-#SCAN_WAIT=20.0
-SCAN_WAIT=20.0
-span_specific="max"
 if sys.argv[1:]:
     span_specific=sys.argv[1]
 #
-if span_specific == "FM":
-    print("FM Band will be swept")
-    gpib.write("START=90E+06\r\n")
-    sleep(0.2)
-    gpib.write("STOP=110E+06\r\n")
-    sleep(0.2)
-    gpib.write("RBW=100000\r\n")		# Resolution Bandwidth
-    SCAN_WAIT=5.0
-elif span_specific == "FM1":
-    print("FM Band will be swept with high RBW")
-    gpib.write("START=90E+06\r\n")
-    sleep(0.2)
-    gpib.write("STOP=110E+06\r\n")
-    sleep(0.2)
-    gpib.write("RBW=30000\r\n")		# Resolution Bandwidth
-    SCAN_WAIT=20.0
-else:
-    print("The entire bandwidth will be swept")
-    gpib.write(SPEC_START)
-    sleep(0.2)
-    gpib.write(SPEC_STOP)
-    sleep(0.2)
-    gpib.write("RBW=300000\r\n")		# Resolution Bandwidth
-#
-sleep(0.2)
-gpib.write("SWM2\r\n")		# Single sweep
-gpib.write("SWP1\r\n")		# Frequency sweep
-gpib.write("SWTRG\r\n")		# Resets the sweep measurement and restarts the sweep.
-print("Please wait: " + str(SCAN_WAIT) + "s for the sweep to finish")
-for sleep_time in range(int(SCAN_WAIT)):
-    sys.stdout.write("Sleeping: " + str(sleep_time) + "\r")
-    sys.stdout.flush()
-    sleep(1.0)
-    #
 #gpib.write("AUTO\r\n")          # Scale the display to the data
 gpib.write("CPYM2\r\n")
 gpib.write("COPY\r\n")
@@ -191,75 +146,61 @@ while not done:      # And not finished
         exit(1)
 
 print("")
-gpib.write("CPYM3\r\n")
-#gpib.write("++eoi 1\r\n")              # Enable EOI assertion with last character
-#gpib.write("RST\r\n")
-#gpib.write("++loc\r\n")
-gpib.close()
-#sleep(30)
-#exit()
-#
-# Let's drop and re-connect so we can reset properly
+gpib.write("CPYM3\r\n")                 # Selects raster graphics dump hard copy mode.
+gpib.write("CLS\r\n")                   # Clear the HP-IB Status Byte
+gpib.write("++loc\r\n")                 # Set the device to local mode
 gpib.close()
 sleep(1.0)
-gpib = connect_and_open()
-gpib.write("++eoi 1")
-gpib.write("RST")
-sleep(2)
-gpib.write("SWM1")		# Continous sweep
-qry = gpib.write("FNC2")        # Select Spectrum analyzer
-qry = gpib.write("PORT3")       # Select Port 3
-sleep(0.5)
-qry = gpib.write("VFTR0")       # Video filter off
-gpib.write("RBW=300000")	# Resolution Bandwidth
-gpib.write("++loc")             # Set local
-gpib.close()
 #
 # Ok, we got data. Let's process it
 lines = [s.strip() for s in data.strip('\0').strip().replace("*","").replace(chr(27),"").split('\n') if s.strip() <> "" and len(s.strip()) > 2]
 lines = [s for s in lines if len(s.strip()) > 2]
 output = []
 #
-filename = "4195_spectrum_analyzer.csv"
+filename = "4195_screen_shot.csv"
 #
 if len(lines) > 2:
     #
     # Let's start writing to file
     f = open(filename, "w")
     # Extract heading
-    heading = filter_non_printable(lines[1])
+    heading = filter_non_printable(lines[1]) + "\n"
+    heading = re.sub(r"^N", "N,", heading)
+    heading = re.sub(r"[]]", "],", heading)
     sys.stdout.write("Heading[1]:\r\n\t" + heading + "\r\n")
     sys.stdout.flush()
-    rxx = re.search("^.*SPECTRUM\s*[0-9]*", heading)
-    if rxx:
-        #
-        #  9              4SPECTRUM
-        now = datetime.now()
-        current_time = now.strftime("%Y/%m/%d %H:%M:%S")
-        if span_specific == "FM":
-            heading = "4195A Spectrum Analyzer " + current_time + ",Commercial Radio FM Band,,"
-        elif span_specific == "FM1":
-            heading = "4195A Spectrum Analyzer " + current_time + ",Commercial Radio FM Band Swept with high RBW,,"
-        else:
-            heading = "4195A Spectrum Analyzer " + current_time + ",0-500MHz Sweep,,"
-        f.write(heading + "\n")            # Let's write this out
-        lstart=3
-        heading = lines[2]
-    else:
-        lstart=2
+    f.write(heading)
+    lstart = 2
+#    rxx = re.search("^.*SPECTRUM\s*[0-9]*", heading)
+#    if rxx:
+#        #
+#        #  9              4SPECTRUM
+#        now = datetime.now()
+#        current_time = now.strftime("%Y/%m/%d %H:%M:%S")
+#        if span_specific == "FM":
+#            heading = "4195A Spectrum Analyzer " + current_time + ",Commercial Radio FM Band,,"
+#        elif span_specific == "FM1":
+#            heading = "4195A Spectrum Analyzer " + current_time + ",Commercial Radio FM Band Swept with high RBW,,"
+#        else:
+#            heading = "4195A Spectrum Analyzer " + current_time + ",0-500MHz Sweep,,"
+#        f.write(heading + "\n")            # Let's write this out
+#        lstart=3
+#        heading = lines[2]
+#    else:
+#        lstart=2
+#
+#    #
+#    # N   FREQUENCY [ Hz ]    A   B
+#    if heading[0] <> 'N':
+#        print("Wrong data format (does not start with 'N')\nCancel copy on local machine and reset GPIB adapter")
+#        f.write(heading + "\n")            # Let's write this out. We don't care what it says
+#        f.close()
+#        exit()
+#    heading = "N,FREQUENCY [ Hz ],DBm,Phase"
+#    f.write(heading + "\n")            # Let's write this out
 
-    #
-    # N   FREQUENCY [ Hz ]    A   B
-    if heading[0] <> 'N':
-        print("Wrong data format (does not start with 'N')\nCancel copy on local machine and reset GPIB adapter")
-        f.write(heading + "\n")            # Let's write this out. We don't care what it says
-        f.close()
-        exit()
-    heading = "N,FREQUENCY [ Hz ],DBm,Phase"
-    f.write(heading + "\n")            # Let's write this out
-
-    sys.stdout.write("Heading[2]:\r\n\t" + heading + "\r\n")
-    sys.stdout.flush()
+#    sys.stdout.write("Heading[2]:\r\n\t" + heading + "\r\n")
+#    sys.stdout.flush()
 
     # Extract line data
     for xline in lines[lstart:]:
@@ -270,6 +211,7 @@ if len(lines) > 2:
 
         fields = ["%e" % float_conv(s) for s in line[22:].split() if s <> ""]
         output.append("%d,%f,%s" % (n, freq, ",".join(fields)))
+        #output.append(line)
 
     # Write waveform to file
     for line in output:
