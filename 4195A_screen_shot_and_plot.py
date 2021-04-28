@@ -25,6 +25,9 @@ import pandas as pd
 import plotly.express as px
 from decimal import *
 
+default_IP="192.168.1.18"
+default_GPIB_address=3
+
 pd.set_option("display.precision", 8)
 
 def keyboardInterruptHandler(signal, frame):
@@ -92,8 +95,7 @@ def check_ports():
     return returned_value
 #
 def connect_and_open():
-
-    gpibx = PrologixGPIBEthernet('192.168.1.18', 2)
+    gpibx = PrologixGPIBEthernet(default_IP, default_GPIB_address)
     # open connection to Prologix GPIB-to-Ethernet adapter
     try:
         gpibx.connect()
@@ -101,16 +103,40 @@ def connect_and_open():
         print("[gpib.connect] Error 1")
         exit()
 
-    # select gpib device at address 10
+    # Select gpib device at address x
     try:
-        gpibx.select(3)
+        gpibx.select(default_GPIB_address)
     except:
         print("[gpib.select] Error 2")
         exit()
     return gpibx
 #
+def read_GPIB_config():
+    filename = "prologix_gpib.conf"
+    try:
+        f = open(filename, "r")
+    except:
+        print "NOTE: ould not open config file. Using defaults"
+
+    for rline in f:
+        li=rline.strip()
+        if not li.startswith("#"):
+            cfline=li.split()
+            tmp_IP=cfline[0]
+            tmp_GPIB_ADDR=cfline[1]
+            if tmp_GPIB_ADDR != "":
+                default_IP=tmp_IP
+                default_GPIB_address=tmp_GPIB_ADDR
+            break
+
+    print "IP: " + default_IP + " - GPIB: " + default_GPIB_address
+    f.close()
+#
 # Main
 signal.signal(signal.SIGINT, keyboardInterruptHandler)
+#
+# Read from the configuration file
+read_GPIB_config()
 #
 gpib = connect_and_open()
 #

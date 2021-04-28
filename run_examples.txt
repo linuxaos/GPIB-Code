@@ -1,0 +1,15 @@
+#
+# @(#) A sample run to create a new plot after setting up the instrument manually
+#
+#
+# If we were in Spectrum analyzer mode
+./plot_copyxa 1 sample_test1 "First Run of test 1" "Sample Test to Check Functionality"
+./plot_copyxa 2 sample_test1 "Run with different resolution bandwidth"
+./plot_copyxa 3 sample_test1 "Run with auto-scale"
+#
+# You get the idea
+#
+# Now if you were in VNA mode
+./plot_copyxa 1 VNA_run_1 "Run with basic VNA options" "Check VNA Functionality"
+./plot_copyxa 2 VNA_run_1 "Run with different resolution bandwidth"
+./plot_copyxa 3 VNA_run_1 "Run with auto-scale"
