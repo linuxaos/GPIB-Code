@@ -2,25 +2,62 @@
 #
 # @(#) Query the 4195a and produce a proper plot
 #
-if [[ -z $GPIB_SCANDIR ]]
+if [[ -z $GPIB_SCANDIR ]]			# This would be an environment variable
 then
 	GPIB_SCANDIR="/var/www/html/GPIB/scans"
 fi
-if [[ -z $3 ]]
-then
-	echo -e "Usage:\n\t$0 numeric_version www_path this_run_description main_description"
+typeset -i INPUT_POWER_FILE_SPEC=0
+typeset -i INPUT_PHASE_FILE_SPEC=0
+INPUT_POWER_FILE=""
+INPUT_PHASE_FILE=""
+#
+usage() {
+	echo -e "Usage:\n\t$0 [-p use_power_file] [-s use_phase_file] numeric_version www_path this_run_description main_description"
 	echo -e "Where:"
+	echo -e "\t-p import_file       - Use this file to display power spectrum instead of reading from the 4195A"
+	echo -e "\t-s import_file       - Use this file to display phase spectrum instead of reading from the 4195A"
 	echo -e "\tNumeric_version      - The unique numeric version of this run"
 	echo -e "\twww_path             - Where apache expects it's root dir. Default: ${GPIB_SCANDIR}/{www_path}"
 	echo -e "\tThis_run_description - A description for this run" 
 	echo -e "\tMain_description     - A description for all the runs in this project"
-	exit 1
-fi
+	echo -e "NOTE: If this is the first run of a test and you do not specify a \"Main_description\""
+	echo -e "then the \"This_run_description\" will be used as the \"Main_description\""
+}
+#
+# Process parameters
+while :
+do
+	if [[ $1 = "-p" ]]
+	then
+		shift
+		INPUT_POWER_FILE_SPEC=1
+		INPUT_PHASE_FILE_SPEC=1
+		INPUT_POWER_FILE=$1
+		shift
+	elif [[ $1 = "-s" ]]
+	then
+		shift
+		INPUT_POWER_FILE_SPEC=1
+		INPUT_PHASE_FILE_SPEC=1
+		INPUT_PHASE_FILE=$1
+		shift
+	elif [[ $1 =~ ^- ]]
+	then
+		usage
+		exit 1
+	else
+		break
+	fi
+done
+#
 typeset -i NUMVERS=$1
 MYDATE=$(date);DE_DATE=$(date "+%m/%d/%Y %H:%M:%S")
 SPECIFIED_GPIB_SCANDIR=$2
 GPIB_SCANDIR="${GPIB_SCANDIR}/${SPECIFIED_GPIB_SCANDIR}"
+#
+[[ -z $3 ]] && { usage; exit 1; }
 THIS_RUN_DESCRIPTION=$3
+#
 [[ -n $4 ]] && MAIN_DESCRIPTION=$4
 MYHOST=$(hostname)
 TDIR="/tmp/GPIB_BUILD"
@@ -29,29 +66,47 @@ TMAINS="${TDIR}/PLOT_MAINS.shtml"
 rm -rf $TDIR
 mkdir -p $TDIR || { echo -e "ERROR: Cannot create directory: ${TDIR}"; exit 1; }
 echo -e "Output path = ${TDIR}\n"
+[[ ! -d $GPIB_SCANDIR ]] && { mkdir -p $GPIB_SCANDIR || exit 1; }
 #
-if (( 1 == 1 ))
+if (( INPUT_POWER_FILE_SPEC > 0 || INPUT_PHASE_FILE_SPEC > 0 ))
 then
+	echo -e "[${NUMVERS}] ${THIS_RUN_DESCRIPTION} Created: ${MYDATE}" > ${TDIR}/gpib_description_${NUMVERS}.shtml
+	if [[ ! -f $INPUT_POWER_FILE ]]
+	then
+		if [[ ! -f $INPUT_PHASE_FILE ]]
+		then
+			echo -e "ERROR: Input file: \"${INPUT_POWER_FILE}\" and \"${INPUT_PHASE_FILE}\" do not exist"
+			exit 1
+		else
+			echo -e "<BR>This scan was imported from: ${INPUT_PHASE_FILE}" >> ${TDIR}/gpib_description_${NUMVERS}.shtml
+		fi
+	else
+		if [[ -f $INPUT_PHASE_FILE ]]
+		then
+			echo -e "<BR>This scan was imported from: ${INPUT_POWER_FILE}<BR>and ${INPUT_PHASE_FILE}" >> ${TDIR}/gpib_description_${NUMVERS}.shtml
+		else
+			echo -e "<BR>This scan was imported from: ${INPUT_POWER_FILE}" >> ${TDIR}/gpib_description_${NUMVERS}.shtml
+		fi
+	fi
+else
 	./4195A_screen_shot_and_plot.py $NUMVERS $TDIR || exit 1
 	sleep 2
 	./4195A_local.py || exit 1
+	#
+	# Ok, let's build the main html page
+	# If you want the <head> tags use the following 2 lines
+	#cat ${TDIR}/gpib_phase_raw_${NUMVERS}.html | tail -n +4 | head -n -2 >${TDIR}/gpib_phase_${NUMVERS}.html
+	#cat ${TDIR}/gpib_power_raw_${NUMVERS}.html | tail -n +4 | head -n -2 >${TDIR}/gpib_power_${NUMVERS}.html
+	#
+	# Otherwise you get a <div>
+	cp -p ${TDIR}/gpib_power_raw_${NUMVERS}.html ${TDIR}/gpib_power_${NUMVERS}.html
+	cp -p ${TDIR}/gpib_phase_raw_${NUMVERS}.html ${TDIR}/gpib_phase_${NUMVERS}.html
+	#
+	cp -p ${TDIR}/gpib_power_raw_mid_${NUMVERS}.html ${TDIR}/gpib_power_mid_${NUMVERS}.html
+	cp -p ${TDIR}/gpib_phase_raw_mid_${NUMVERS}.html ${TDIR}/gpib_phase_mid_${NUMVERS}.html
+	echo -e "[${NUMVERS}] ${THIS_RUN_DESCRIPTION} Created: ${MYDATE}" > ${TDIR}/gpib_description_${NUMVERS}.shtml
+	cat ${TDIR}/4195_screen_shot_MACH_HEADER_${NUMVERS}.html >> ${TDIR}/gpib_description_${NUMVERS}.shtml
 fi
-
-[[ ! -d $GPIB_SCANDIR ]] && { mkdir -p $GPIB_SCANDIR || exit 1; }
-#
-# Ok, let's build the main html page
-# If you want the <head> tags use the following 2 lines
-#cat ${TDIR}/gpib_phase_raw_${NUMVERS}.html | tail -n +4 | head -n -2 >${TDIR}/gpib_phase_${NUMVERS}.html
-#cat ${TDIR}/gpib_power_raw_${NUMVERS}.html | tail -n +4 | head -n -2 >${TDIR}/gpib_power_${NUMVERS}.html
-#
-# Otherwise you get a <div>
-cp -p ${TDIR}/gpib_power_raw_${NUMVERS}.html ${TDIR}/gpib_power_${NUMVERS}.html
-cp -p ${TDIR}/gpib_phase_raw_${NUMVERS}.html ${TDIR}/gpib_phase_${NUMVERS}.html
-#
-cp -p ${TDIR}/gpib_power_raw_mid_${NUMVERS}.html ${TDIR}/gpib_power_mid_${NUMVERS}.html
-cp -p ${TDIR}/gpib_phase_raw_mid_${NUMVERS}.html ${TDIR}/gpib_phase_mid_${NUMVERS}.html
-echo -e "${THIS_RUN_DESCRIPTION} Created: ${MYDATE}" > ${TDIR}/gpib_description_${NUMVERS}.shtml
-cat ${TDIR}/4195_screen_shot_MACH_HEADER_${NUMVERS}.html >> ${TDIR}/gpib_description_${NUMVERS}.shtml
 #
 # We replace the main description or put a blank
 if [[ -n $MAIN_DESCRIPTION ]]
@@ -60,28 +115,59 @@ then
 else
 	if [[ ! -f ${GPIB_SCANDIR}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html ]]
 	then
-		echo -e "&nbsp;"  > ${TDIR}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html
+		echo -e "${THIS_RUN_DESCRIPTION}"  > ${TDIR}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html
 	fi
 fi
 ######################################################################################################################################
 # First one plot after the other.
 	echo -e "<table>" >$TMAIN
-	#
+	####################################
 	# POWER: First, add the current one
-	echo -e "\t<tr>" >>$TMAIN
-		echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
-		echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
-		echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
-		echo -e "\t\t\t</div>" >>$TMAIN
-		echo -e "\t\t</td>" >>$TMAIN
-	echo -e "\t</tr>" >>$TMAIN
-	echo -e "\t<tr>" >>$TMAIN
-		echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
-		echo -e "\t\t\t<!--#include file=\"gpib_power_${NUMVERS}.html\"-->" >>$TMAIN
-		echo -e "\t\t</td>" >>$TMAIN
-	echo -e "\t</tr>" >>$TMAIN
+	if (( INPUT_POWER_FILE_SPEC == 0 ))		# Did we scan the 4195A or are we using what is already there ?
+	then
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
+			echo -e "\t\t\t</div>" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+			echo -e "\t\t\t<!--#include file=\"gpib_power_${NUMVERS}.html\"-->" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+	else
+		#
+		# Ok, let's handle the situation where we were given the power file
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
+			echo -e "\t\t\t</div>" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+		if [[ -f $INPUT_POWER_FILE ]]
+		then
+			echo -e "\t<tr>" >>$TMAIN
+				echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+					cp -p $INPUT_POWER_FILE $TDIR
+					INPUT_POWER_FILE_PLAIN=$(basename $INPUT_POWER_FILE)
+					echo -e "<img src=\"${INPUT_POWER_FILE_PLAIN}\" alt=\"${INPUT_POWER_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_power_${NUMVERS}.html
+					echo -e "\t\t\t<!--#include file=\"gpib_power_${NUMVERS}.html\"-->" >>$TMAIN
+				echo -e "\t\t</td>" >>$TMAIN
+			echo -e "\t</tr>" >>$TMAIN
+		else											# Doesn't exist! Must've been give the phase file
+			echo -e "\t<tr>" >>$TMAIN
+				echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+				echo -e "&nbsp;" >${TDIR}/gpib_power_${NUMVERS}.html
+				echo -e "\t\t\t<!--#include file=\"gpib_power_${NUMVERS}.html\"-->" >>$TMAIN
+				echo -e "\t\t</td>" >>$TMAIN
+			echo -e "\t</tr>" >>$TMAIN
+		fi
+	fi
 	#
-	# Next, let's build what is already there
+	# Next, let's build the power spectrum from what is already there
 	ls $GPIB_SCANDIR | grep gpib_power | grep -v raw | sed 's/gpib_power_//;s/[.]html//' | grep -v "mid" | sort -nr | while read line
 	do
 		# Check for overwrite !!!!!!!!!!!!!!!!!!!!!!!!
@@ -103,20 +189,49 @@ fi
 			echo -e "\t\t</td>" >>$TMAIN
 		echo -e "\t</tr>" >>$TMAIN
 	done
-	#
+	####################################
 	# PHASE: First, add the current one
-	echo -e "\t<tr>" >>$TMAIN
-		echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
-		echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
-		echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
-		echo -e "\t\t\t</div>" >>$TMAIN
-		echo -e "\t\t</td>" >>$TMAIN
-	echo -e "\t</tr>" >>$TMAIN
-	echo -e "\t<tr>" >>$TMAIN
-		echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
-		echo -e "\t\t\t<!--#include file=\"gpib_phase_${NUMVERS}.html\"-->" >>$TMAIN
-		echo -e "\t\t</td>" >>$TMAIN
-	echo -e "\t</tr>" >>$TMAIN
+	if (( INPUT_POWER_FILE_SPEC == 0 ))		# Did we scan the 4195A or are we using what is already there ?
+	then
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAIN
+			echo -e "\t\t\t</div>" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+			echo -e "\t\t\t<!--#include file=\"gpib_phase_${NUMVERS}.html\"-->" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+	else
+		echo -e "\t<tr>" >>$TMAIN
+			echo -e "\t\t<td style=\"width:100%;background-color:#004d00\">" >>$TMAIN
+			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAIN
+			echo -e "\t\t\t\t&nbsp;" >>$TMAIN
+			echo -e "\t\t\t</div>" >>$TMAIN
+			echo -e "\t\t</td>" >>$TMAIN
+		echo -e "\t</tr>" >>$TMAIN
+		if [[ -f $INPUT_PHASE_FILE ]]
+		then
+			echo -e "\t<tr>" >>$TMAIN
+				echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+					cp -p $INPUT_PHASE_FILE $TDIR
+					INPUT_PHASE_FILE_PLAIN=$(basename $INPUT_PHASE_FILE)
+					echo -e "<img src=\"${INPUT_PHASE_FILE_PLAIN}\" alt=\"${INPUT_PHASE_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_phase_${NUMVERS}.html
+					echo -e "\t\t\t<!--#include file=\"gpib_phase_${NUMVERS}.html\"-->" >>$TMAIN
+				echo -e "\t\t</td>" >>$TMAIN
+			echo -e "\t</tr>" >>$TMAIN
+		else								# Doesn't exist! WTF! We checked above and it was there !
+			echo -e "\t<tr>" >>$TMAIN
+				echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
+					echo -e "\t\t\t&nbsp;" >${TDIR}/gpib_phase_${NUMVERS}.html
+					echo -e "\t\t\t<!--#include file=\"gpib_phase_${NUMVERS}.html\"-->" >>$TMAIN
+				echo -e "\t\t</td>" >>$TMAIN
+			echo -e "\t</tr>" >>$TMAIN
+		fi
+	fi
 	#
 	# Next, lets build what is already there
 	ls $GPIB_SCANDIR | grep gpib_phase | grep -v raw | sed 's/gpib_phase_//;s/[.]html//' | grep -v "mid" | sort -nr | while read line
@@ -145,22 +260,24 @@ fi
 # Next, one plot next to the other
 	echo -e "<table style=\"width:100%;\">" >$TMAINS
 	#
-	# First, add the current one
-		echo -e "\t<tr>" >>$TMAINS
-			echo -e "\t\t<td style=\"background-color:#004d00\">" >>$TMAINS
-			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
-			echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAINS
-			echo -e "\t\t\t</div>" >>$TMAINS
-			echo -e "\t\t</td>" >>$TMAINS
-			echo -e "\t\t<td>" >>$TMAINS
-			echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
-			echo -e "\t\t\t\t&nbsp;" >>$TMAINS
-			echo -e "\t\t\t</div>" >>$TMAINS
-			echo -e "\t\t</td>" >>$TMAINS
-		echo -e "\t</tr>" >>$TMAINS
+	########################################
+	# First, add the current Power and phase
+	echo -e "\t<tr>" >>$TMAINS
+		echo -e "\t\t<td style=\"background-color:#004d00\">" >>$TMAINS
+		echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
+		echo -e "\t\t\t\t<!--#include file=\"gpib_description_${NUMVERS}.shtml\"-->" >>$TMAINS
+		echo -e "\t\t\t</div>" >>$TMAINS
+		echo -e "\t\t</td>" >>$TMAINS
+		echo -e "\t\t<td>" >>$TMAINS
+		echo -e "\t\t\t<div style=\"font-family:courier;font-weight:bold;font-size:16pt;text-align:center;color:White\">" >>$TMAINS
+		echo -e "\t\t\t\t&nbsp;" >>$TMAINS
+		echo -e "\t\t\t</div>" >>$TMAINS
+		echo -e "\t\t</td>" >>$TMAINS
+	echo -e "\t</tr>" >>$TMAINS
+	if (( INPUT_POWER_FILE_SPEC == 0 ))		# Did we scan the 4195A or are we using what is already there ?
+	then
 		echo -e "\t<tr>" >>$TMAINS
 			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
-
 				echo -e "\t\t\t<table style=\"width:100%;\">" >>$TMAINS
 					echo -e "\t\t\t\t<tr>" >>$TMAINS
 						echo -e "\t\t\t\t\t<td style=\"width:100%\">" >>$TMAINS
@@ -168,13 +285,43 @@ fi
 						echo -e "\t\t\t\t\t</td>" >>$TMAINS
 					echo -e "\t\t\t\t</tr>" >>$TMAINS
 				echo -e "\t\t\t</table>" >>$TMAINS
-
 			echo -e "\t\t</td>" >>$TMAINS
 			#
 			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
 			echo -e "\t\t\t<!--#include file=\"gpib_phase_mid_${NUMVERS}.html\"-->" >>$TMAINS
 			echo -e "\t\t</td>" >>$TMAINS
 		echo -e "\t</tr>" >>$TMAINS
+	else
+		echo -e "\t<tr>" >>$TMAINS
+			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
+				echo -e "\t\t\t<table style=\"width:100%;\">" >>$TMAINS
+					echo -e "\t\t\t\t<tr>" >>$TMAINS
+						echo -e "\t\t\t\t\t<td style=\"width:100%\">" >>$TMAINS
+							if [[ -f $INPUT_POWER_FILE ]]
+							then
+								echo -e "<img src=\"${INPUT_POWER_FILE_PLAIN}\" alt=\"${INPUT_POWER_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_power_mid_${NUMVERS}.html
+							else
+								echo -e "&nbsp;" >${TDIR}/gpib_power_mid_${NUMVERS}.html
+							fi
+							echo -e "\t\t\t\t\t\t<!--#include file=\"gpib_power_mid_${NUMVERS}.html\"-->" >>$TMAINS
+						echo -e "\t\t\t\t\t</td>" >>$TMAINS
+					echo -e "\t\t\t\t</tr>" >>$TMAINS
+				echo -e "\t\t\t</table>" >>$TMAINS
+			echo -e "\t\t</td>" >>$TMAINS
+			#
+			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
+			if [[ -f $INPUT_PHASE_FILE ]]
+			then
+				echo -e "<img src=\"${INPUT_PHASE_FILE_PLAIN}\" alt=\"${INPUT_PHASE_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_phase_mid_${NUMVERS}.html
+			else
+				echo -e "&nbsp;" >${TDIR}/gpib_phase_mid_${NUMVERS}.html
+			fi
+			echo -e "\t\t\t<!--#include file=\"gpib_phase_mid_${NUMVERS}.html\"-->" >>$TMAINS
+			echo -e "\t\t</td>" >>$TMAINS
+		echo -e "\t</tr>" >>$TMAINS
+	fi
+	#
+	# Next, let's build the power and phase spectrum from what is already there
 	ls $GPIB_SCANDIR | grep gpib_power | grep -v raw | sed 's/gpib_power_//;s/[.]html//' | grep -v "mid" | sort -nr | while read line
 	do
 		# Check for overwrite !!!!!!!!!!!!!!!!!!!!!!!!
@@ -205,4 +352,6 @@ fi
 # Finishing touches
 sed 's/HOSTNAME/'"${MYHOST}"'/' gpib_base.shtml >${TDIR}/index.shtml
 sed 's/HOSTNAME/'"${MYHOST}"'/;s/PLOT_MAIN.shtml/PLOT_MAINS.shtml/' gpib_base.shtml >${TDIR}/indexs.shtml
+#
+# Now that we built everything, copy it to the HTML directory
 cp -p ${TDIR}/* $GPIB_SCANDIR/.

@@ -160,7 +160,18 @@ if sys.argv[2:]:
 register_name="Resolution Bandwidth"
 gpib.write("RBW?\r\n")            # Read register RBW Resolution Bandwidth
 sleep(1.0)
-buf = filter_non_printable(gpib.read())
+try:
+    buf = filter_non_printable(gpib.read())
+except:
+    print("[gpib.read] Error 1")
+    done = True
+    gpib.write("CLS\r\n")
+    sleep(2.2)
+    gpib.write("++loc\r\n")
+    gpib.write("++lon 0\r\n")       # Disable "listen only mode"
+    gpib.close()
+    exit(1)
+#
 buf = buf.replace("*", "")
 ebuf = Decimal(str(buf)).normalize(); bufeng = ebuf.to_eng_string();
 print_line = register_name + ": " + bufeng + "Hz"; print print_line

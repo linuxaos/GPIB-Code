@@ -1,2 +1,2 @@
 # GPIB-Code
-GPIB programs to access instruments
+Programs to access GPIB connected instruments

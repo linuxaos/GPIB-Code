@@ -99,7 +99,7 @@ do
 	echo -e "</td>"
 	echo -e "<td style=\"width:40%;border:solid;border-top:none;border-left:none;border-bottom:none;border-right:none;text-align:Center;\">"
 		MAIN_CAP=$(cat ${GPIB_SCANDIR}/${BNAME}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html)
-		echo -e "<a href=\"scans/${BNAME}/index.shtml\" style=\"font-family:Courier;font-weight:Bold;font-size:16pt;text-decoration:none;\">&nbsp;${MAIN_CAP}</a>"
+		echo -e "<a href=\"scans/${BNAME}/index.shtml\" style=\"font-family:Courier;font-weight:Bold;font-size:12pt;text-decoration:none;\">&nbsp;${MAIN_CAP}</a>"
 	echo -e "</td>"
 	#
 	echo -e "<td style=\"width:1%;background-color:#e6e6e6\">"
@@ -116,7 +116,7 @@ do
 		BNAME=$(basename $line)
 		echo -e "<td style=\"width:39%;text-align:Center;\">"
 			MAIN_CAP=$(cat ${GPIB_SCANDIR}/${BNAME}/gpib_description_MAIN_CAPTURE_DESCRIPTION.html)
-			echo -e "<a href=\"scans/${BNAME}/index.shtml\" style=\"font-family:Courier;font-weight:Bold;font-size:16pt;text-decoration: none;\">&nbsp;${MAIN_CAP}</a>"
+			echo -e "<a href=\"scans/${BNAME}/index.shtml\" style=\"font-family:Courier;font-weight:Bold;font-size:12pt;text-decoration: none;\">&nbsp;${MAIN_CAP}</a>"
 		echo -e "</td>"
 	fi
 	echo -e "<td style=\"width:10%;\">"
@@ -139,7 +139,7 @@ cat <<-EOF2
 								<tr>
 									<td style="text-align:center;width:10%">&nbsp;</td>
 									<td style="text-align:center;width:70%;border: none;">
-										<a href="https://github.com/linuxaos/GPIB-Code" style="color:${TEXT_COLOR};font-family:Courier;font-weight:Bold;font-size:16pt;text-decoration: none;">Github GPIB Code</a>
+										<a href="https://github.com/linuxaos/GPIB-Code" style="color:${TEXT_COLOR};font-family:Courier;font-weight:Bold;font-size:12pt;text-decoration: none;">Project GPIB Code at Github</a>
 									</td>
 									<td style="text-align:center;width:20%">
 										&nbsp;
@@ -156,7 +156,9 @@ cat <<-EOF2
 		</div>
 		<script>
 			var dt = new Date();
-			document.getElementById("datetime").innerHTML = dt.toLocaleString('en-GB')
+			/*
+				document.getElementById("datetime").innerHTML = dt.toLocaleString('en-GB')
+			*/
 		</script>
 	</body>
 </html>
