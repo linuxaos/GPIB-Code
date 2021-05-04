@@ -10,12 +10,16 @@ typeset -i INPUT_POWER_FILE_SPEC=0
 typeset -i INPUT_PHASE_FILE_SPEC=0
 INPUT_POWER_FILE=""
 INPUT_PHASE_FILE=""
+IMAGE_HEIGHT="75%"
 #
 usage() {
-	echo -e "Usage:\n\t$0 [-p use_power_file] [-s use_phase_file] numeric_version www_path this_run_description main_description"
+	echo -e "Usage:\n\t$0 [-i Height] [-p use_power_file] [-s use_phase_file] [-h] numeric_version www_path this_run_description main_description"
 	echo -e "Where:"
-	echo -e "\t-p import_file       - Use this file to display power spectrum instead of reading from the 4195A"
-	echo -e "\t-s import_file       - Use this file to display phase spectrum instead of reading from the 4195A"
+	echo -e "\t-h                   - Show the help file"
+	echo -e "\t-i Image_Height      - If you specify an image usually the height is set to 75%. Here you can override this by"
+	echo -e "\t                       Specifying the height percentage. e.x. 10% or 80% or 100%"
+	echo -e "\t-p Import_File       - Use this file to display power spectrum instead of reading from the 4195A"
+	echo -e "\t-s Import_File       - Use this file to display phase spectrum instead of reading from the 4195A"
 	echo -e "\tNumeric_version      - The unique numeric version of this run"
 	echo -e "\twww_path             - Where apache expects it's root dir. Default: ${GPIB_SCANDIR}/{www_path}"
 	echo -e "\tThis_run_description - A description for this run" 
@@ -40,6 +44,11 @@ do
 		INPUT_POWER_FILE_SPEC=1
 		INPUT_PHASE_FILE_SPEC=1
 		INPUT_PHASE_FILE=$1
+		shift
+	elif [[ $1 = "-i" ]]
+	then
+		shift
+		IMAGE_HEIGHT=$1
 		shift
 	elif [[ $1 =~ ^- ]]
 	then
@@ -153,7 +162,7 @@ fi
 				echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
 					cp -p $INPUT_POWER_FILE $TDIR
 					INPUT_POWER_FILE_PLAIN=$(basename $INPUT_POWER_FILE)
-					echo -e "<img src=\"${INPUT_POWER_FILE_PLAIN}\" alt=\"${INPUT_POWER_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_power_${NUMVERS}.html
+					echo -e "<img src=\"${INPUT_POWER_FILE_PLAIN}\" alt=\"${INPUT_POWER_FILE_PLAIN}\" style=\"width:100%;height:${IMAGE_HEIGHT};max-width:100%;max-height:100%;\">" >${TDIR}/gpib_power_${NUMVERS}.html
 					echo -e "\t\t\t<!--#include file=\"gpib_power_${NUMVERS}.html\"-->" >>$TMAIN
 				echo -e "\t\t</td>" >>$TMAIN
 			echo -e "\t</tr>" >>$TMAIN
@@ -219,7 +228,7 @@ fi
 				echo -e "\t\t<td style=\"width:100%\">" >>$TMAIN
 					cp -p $INPUT_PHASE_FILE $TDIR
 					INPUT_PHASE_FILE_PLAIN=$(basename $INPUT_PHASE_FILE)
-					echo -e "<img src=\"${INPUT_PHASE_FILE_PLAIN}\" alt=\"${INPUT_PHASE_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_phase_${NUMVERS}.html
+					echo -e "<img src=\"${INPUT_PHASE_FILE_PLAIN}\" alt=\"${INPUT_PHASE_FILE_PLAIN}\" style=\"width:100%;height:${IMAGE_HEIGHT};max-width:100%;max-height:100%;\">" >${TDIR}/gpib_phase_${NUMVERS}.html
 					echo -e "\t\t\t<!--#include file=\"gpib_phase_${NUMVERS}.html\"-->" >>$TMAIN
 				echo -e "\t\t</td>" >>$TMAIN
 			echo -e "\t</tr>" >>$TMAIN
@@ -299,7 +308,7 @@ fi
 						echo -e "\t\t\t\t\t<td style=\"width:100%\">" >>$TMAINS
 							if [[ -f $INPUT_POWER_FILE ]]
 							then
-								echo -e "<img src=\"${INPUT_POWER_FILE_PLAIN}\" alt=\"${INPUT_POWER_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_power_mid_${NUMVERS}.html
+								echo -e "<img src=\"${INPUT_POWER_FILE_PLAIN}\" alt=\"${INPUT_POWER_FILE_PLAIN}\" style=\"width:100%;height:${IMAGE_HEIGHT};max-width:100%;max-height:100%;\">" >${TDIR}/gpib_power_mid_${NUMVERS}.html
 							else
 								echo -e "&nbsp;" >${TDIR}/gpib_power_mid_${NUMVERS}.html
 							fi
@@ -312,7 +321,7 @@ fi
 			echo -e "\t\t<td style=\"width:50%\">" >>$TMAINS
 			if [[ -f $INPUT_PHASE_FILE ]]
 			then
-				echo -e "<img src=\"${INPUT_PHASE_FILE_PLAIN}\" alt=\"${INPUT_PHASE_FILE_PLAIN}\" width=\"100%\" height=\"726px\" style=\"max-width=auto;height=auto;\">" >${TDIR}/gpib_phase_mid_${NUMVERS}.html
+				echo -e "<img src=\"${INPUT_PHASE_FILE_PLAIN}\" alt=\"${INPUT_PHASE_FILE_PLAIN}\" style=\"width:100%;height:${IMAGE_HEIGHT};max-width:100%;max-height:100%;\">" >${TDIR}/gpib_phase_mid_${NUMVERS}.html
 			else
 				echo -e "&nbsp;" >${TDIR}/gpib_phase_mid_${NUMVERS}.html
 			fi
